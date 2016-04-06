@@ -17,6 +17,7 @@ __author__ = 'Loto_Bak'
 # Limitations
 #  Only moves the first fanart and screenshot (RCB seems to only support 1 of each image type)
 #  Regex for brackets likely needs some work
+#  I ruin some utf8 encoding in an effort to keep sqlite happy. Should do a better job of this later. 
 #
 #
 # Its quick and dirty. Dont expect much
@@ -65,12 +66,13 @@ collection_translation = {'3DO' : '3DO',
                             'Colecovision': 'ColecoVision',
                             'Commodore 64': 'Commodore 64',
                             'Sega Dreamcast': 'Dreamcast',
-                            'Nintendo Gameboy': 'Game Boy',
-                            'Nintendo Gameboy Advance': 'Game Boy Advance',
+                            'Nintendo Game Boy': 'Game Boy',
+                            'Nintendo Game Boy Advance': 'Game Boy Advance',
                             'Nintendo Game Boy Color': 'Game Boy Color',
                             'Nintendo GameCube': 'GameCube',
                             'Sega Game Gear': 'Game Gear',
                             'Sega Genesis': 'Genesis',
+                            'Sega Master System': 'SEGA Master System',
                             'Intellivision': 'Intellivision',
                             'Atari Jaguar': 'Jaguar',
                             'Mac OS': 'Macintosh',
@@ -109,12 +111,12 @@ for type in image_types:
         os.makedirs(output_directory + "\\" + type)
 
 xml = xmlize.parse(launchbox_xml_path).getroot()
-
+limit1 = 10
+count1 = 0
 for row in xml.findall('Game'):
     try:
-        title = row.findall('Title')[0].text
+        title = row.findall('Title')[0].text.encode('charmap', 'replace').decode('utf8', 'replace').encode('ascii', 'replace')
         title_filename = title
-        print title_filename
         for c in replaceable_characters:
             title_filename = re.sub(c, "_", title_filename)
         path = row.findall('ApplicationPath')[0].text
@@ -122,10 +124,14 @@ for row in xml.findall('Game'):
         for c in replaceable_characters:
             rom_filename = re.sub(c, "_", rom_filename)
         try:
-            notes = row.findall('Notes')[0].text
+            notes = row.findall('Notes')[0].text.encode('charmap', 'replace').decode('utf8', 'replace').encode('ascii', 'replace')
         except:
             notes = ""
         platform = row.findall('Platform')[0].text
+        #print platform
+        if platform == "Arcade" or platform == None:
+            continue
+        print title_filename
         platform_path = platform
         for c in replaceable_characters:
             platform_path = re.sub(c, "_", platform_path)
@@ -138,7 +144,7 @@ for row in xml.findall('Game'):
         except:
             developer = ""
         try:
-            rating = row.findall('Rating')[0].text # Not all games have ratings!
+            rating = row.findall('Rating')[0].text 
         except:
             rating = ""
         try:
@@ -156,7 +162,6 @@ for row in xml.findall('Game'):
     except:
         test = row
         print "failed" + row.findall('Title')[0].text
-
     c = conn.cursor()
     try:
         genre_list = genre.split(";")
@@ -166,42 +171,39 @@ for row in xml.findall('Game'):
     for genre in genre_list:
         if genre != "" and genre != None:
             c = conn.cursor()
-            c.execute('SELECT id FROM Genre WHERE name = "' + genre + '"')
+            a = c.execute('SELECT id FROM Genre WHERE name = ?', (genre,))
             data = c.fetchall()
             if len(data) < 1:
-                c.execute('INSERT INTO Genre ("name") VALUES ("' + genre + '")')
+                a = c.execute('INSERT INTO Genre ("name") VALUES (?)', (genre,))
                 conn.commit()
-                c.execute('SELECT id FROM Genre WHERE name = "' + genre + '"')
+                a = c.execute('SELECT id FROM Genre WHERE name = ?', (genre,))
                 genre_ids.append(c.fetchall()[0][0])
             else:
                 genre_ids.append(data[0][0])
-
     c = conn.cursor()
     publisher_id = None
     if publisher != "" and publisher != None:
-        c.execute('SELECT id FROM Publisher WHERE name = "' + publisher + '"')
+        a = c.execute('SELECT id FROM Publisher WHERE name = ?', (publisher,))
         data = c.fetchall()
         if len(data) < 1:
-            c.execute('INSERT INTO Publisher ("name") VALUES ("' + publisher + '")')
+            a = c.execute('INSERT INTO Publisher ("name") VALUES (?)', (publisher,))
             conn.commit()
-            c.execute('SELECT id FROM Publisher WHERE name = "' + publisher + '"')
+            a = c.execute('SELECT id FROM Publisher WHERE name = ?', (publisher,))
             publisher_id = c.fetchall()[0][0]
         else:
             publisher_id = data[0][0]
-
     c = conn.cursor()
     developer_id = None
     if developer != "" and developer != None:
-        c.execute('SELECT id FROM Developer WHERE name = "' + developer + '"')
+        a = c.execute('SELECT id FROM Developer WHERE name = ?', (developer,))
         data = c.fetchall()
         if len(data) < 1:
-            c.execute('INSERT INTO Developer ("name") VALUES ("' + developer + '")')
+            a = c.execute('INSERT INTO Developer ("name") VALUES (?)', (developer,))
             conn.commit()
-            c.execute('SELECT id FROM Developer WHERE name = "' + developer + '"')
+            a = c.execute('SELECT id FROM Developer WHERE name = ?', (developer,))
             developer_id = c.fetchall()[0][0]
         else:
             developer_id = data[0][0]
-
     c = conn.cursor()
     try:
         year = releasedate[:4]
@@ -209,32 +211,36 @@ for row in xml.findall('Game'):
         year = None
     year_id = None
     if releasedate != "" and year != None:
-        c.execute('SELECT id FROM Year WHERE name = "' + year + '"')
+        a = c.execute('SELECT id FROM Year WHERE name = ?', (year,))
         data = c.fetchall()
         if len(data) < 1:
-            c.execute('INSERT INTO Year ("name") VALUES ("' + year + '")')
+            a = c.execute('INSERT INTO Year ("name") VALUES (?)', (year,))
             conn.commit()
-            c.execute('SELECT id FROM Year WHERE name = "' + year + '"')
+            a = c.execute('SELECT id FROM Year WHERE name = ?', (year,))
             year_id = c.fetchall()[0][0]
         else:
             year_id = data[0][0]
         conn.commit()
-
     commited = False
     version = ""
     counter = 0
     title_addon = ""
     if add_rom_bracket_flags == True:
-        title_addon = title_addon + " " + re.search('(\(.+\))', rom_filename).group(0)
+            try:
+                title_addon = title_addon + " " + re.search('(\(.+\))', rom_filename).group(0)
+            except:
+                noop = 1
     if add_rom_square_bracket_flags == True:
-        title_addon = title_addon + " " + re.search('(\[.+\])', rom_filename).group(0)
+            try:
+                title_addon = title_addon + " " + re.search('(\[.+\])', rom_filename).group(0)
+            except:
+                noop = 1
     if remove_gooddump_flag:
         title_addon = title_addon.replace(" [!]", "")
         title_addon = title_addon.replace("[!]", "")
-
     while commited == False:
         try:
-            c.execute('INSERT INTO Game ("name", "description", "romCollectionId", "publisherId", "yearId", "developerId") VALUES ( ?, ?, ?, ?, ?, ?)', (title + title_addon + version, notes, str(collection_ids[collection_translation[platform]]), publisher_id, year_id, developer_id))
+            a = c.execute('INSERT INTO Game ("name", "description", "romCollectionId", "publisherId", "yearId", "developerId") VALUES ( ?, ?, ?, ?, ?, ?)', (title + title_addon + version, notes, str(collection_ids[collection_translation[platform]]), publisher_id, year_id, developer_id))
             conn.commit()
             commited = True
         except:
@@ -243,23 +249,24 @@ for row in xml.findall('Game'):
             print "failed"
         if counter > 25:
             break
-    c.execute('SELECT id FROM Game WHERE name = ? and romCollectionId = ?', (title + title_addon + version, str(collection_ids[collection_translation[platform]])))
+    a = c.execute('SELECT id FROM Game WHERE name = ? and romCollectionId = ?', (title + title_addon + version, str(collection_ids[collection_translation[platform]])))
     game_id = c.fetchall()[0][0]
-
-    c.execute('INSERT INTO File ("name", "fileTypeId", "parentId") VALUES ( ?, ?, ?)', (os.path.abspath(path), 0, game_id))
-
+    a = c.execute('INSERT INTO File ("name", "fileTypeId", "parentId") VALUES ( ?, ?, ?)', (os.path.abspath(path), 0, game_id))
     for genre_id in genre_ids:
-        c.execute('INSERT INTO GenreGame ("genreId", "gameId") VALUES ( ?, ?)', (genre_id, game_id))
+        a = c.execute('INSERT INTO GenreGame ("genreId", "gameId") VALUES ( ?, ?)', (genre_id, game_id))
     conn.commit()
-
+    if not os.path.isdir(output_directory + "\\"  + platform_path):
+        os.makedirs(output_directory + "\\"  + platform_path)
     for type in image_types:
+        if not os.path.isdir(output_directory + "\\"  + platform_path + "\\" + type):
+            os.makedirs(output_directory + "\\"  + platform_path + "\\" + type)
         if type == "Screenshot" or type == "Fanart":
             modifier = "-01"
         else:
             modifier = ""
         if os.path.isfile(images_path + platform_path + "\\" + type + "\\" + title_filename + modifier + ".jpg"):
-            cp(images_path + platform_path + "\\" + type + "\\" + title_filename + modifier + ".jpg", output_directory + type + "\\" + os.path.splitext(rom_filename)[0] + ".jpg")
+            cp(images_path + platform_path + "\\" + type + "\\" + title_filename + modifier + ".jpg", output_directory + platform_path + "\\" + type + "\\" + os.path.splitext(rom_filename)[0] + ".jpg")
         if os.path.isfile(images_path + platform_path + "\\" + type + "\\" + title_filename + modifier + ".png"):
-            cp(images_path + platform_path + "\\" + type + "\\" + title_filename + modifier + ".png", output_directory + type + "\\" + os.path.splitext(rom_filename)[0] + ".png")
+            cp(images_path + platform_path + "\\" + type + "\\" + title_filename + modifier + ".png", output_directory + platform_path + "\\" + type + "\\" + os.path.splitext(rom_filename)[0] + ".png")
 
 conn.close()
