@@ -34,14 +34,9 @@ images_path = "C:\\Users\\User\\LaunchBox\\Images\\"
 output_directory = "C:\\output\\"
 sqllite_database_path = "C:\\Users\\User\\AppData\\Roaming\\Kodi\\userdata\\addon_data\\script.games.rom.collection.browser\\MyGames.db"
 RCB_config_path = "C:\\Users\\User\\AppData\\Roaming\\Kodi\\userdata\\addon_data\\script.games.rom.collection.browser\\config.xml"
-# launchbox_xml_path = "c:\\LaunchBox\\LaunchBox.xml"
-# images_path = "c:\\LaunchBox\\Images\\"
-# output_directory = "c:\\output\\"
-# sqllite_database_path = "c:\\MyGames.db"
-# RCB_config_path = "c:\\config.xml"
-add_rom_bracket_flags = True # add anything in () brackets back to the rom title
-add_rom_square_bracket_flags = True
-remove_gooddump_flag = True
+add_rom_bracket_flags = True # add anything in () brackets back to the rom title. Helps with duplicate version identification
+add_rom_square_bracket_flags = True # add anything in [] brackets back to rom title. Helps with duplicate version identification
+remove_gooddump_flag = True # remove [!] from rom titles
 
 conn = sqlite3.connect(sqllite_database_path)
 c = conn.cursor()
