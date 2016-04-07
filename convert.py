@@ -235,7 +235,7 @@ for row in xml.findall('Game'):
         title_addon = title_addon.replace("[!]", "")
     while commited == False:
         try:
-            a = c.execute('INSERT INTO Game ("name", "description", "romCollectionId", "publisherId", "yearId", "developerId") VALUES ( ?, ?, ?, ?, ?, ?)', (title + title_addon + version, notes, str(collection_ids[collection_translation[platform]]), publisher_id, year_id, developer_id))
+            a = c.execute('INSERT INTO Game ("name", "description", "romCollectionId", "publisherId", "yearId", "developerId", "launchCount", "isFavorite") VALUES ( ?, ?, ?, ?, ?, ?, ?, ?)', (title + title_addon + version, notes, str(collection_ids[collection_translation[platform]]), publisher_id, year_id, developer_id, 0, 0))
             conn.commit()
             commited = True
         except:
